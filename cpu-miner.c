@@ -174,7 +174,7 @@ int opt_timeout = 270;
 int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
-enum sha256_algos opt_algo = ALGO_SCRYPT; // CB
+enum sha256_algos opt_algo = ALGO_SCRYPT;// CB
 char *jane_params = ""; // CB
 static int opt_n_threads;
 int num_processors; // CB
@@ -755,7 +755,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo != ALGO_KECCAK && opt_algo != ALGO_BLAKE) // CB: fix for stratum pools with MaxCoin and Blake
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
+		printf("%s", "not implemented");
+		//SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		sha256d(merkle_root, merkle_root, 64);
@@ -920,7 +921,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_scrypt(thr_id, work.data, work.target,  // CB
 			                     max_nonce, &tv_start, &tv_end, &hashes_done);
 			break;
-
+		
 		case ALGO_SCRYPT_JANE:
 			rc = scanhash_scrypt_jane(thr_id, work.data, work.target,  // CB
 			                     max_nonce, &tv_start, &tv_end, &hashes_done);
@@ -930,7 +931,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_sha256d(thr_id, work.data, work.target, // CB
 			                      max_nonce, &tv_start, &tv_end, &hashes_done);
 			break;
-
+#if 0
 		case ALGO_KECCAK:
 			rc = scanhash_keccak(thr_id, work.data, work.target,
 			                      max_nonce, &tv_start, &tv_end, &hashes_done);
@@ -940,7 +941,8 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_blake(thr_id, work.data, work.target,
 			                    max_nonce, &tv_start, &tv_end, &hashes_done);
 			break;
-
+#endif
+		
 		default:
 			/* should never happen */
 			goto out;
@@ -974,7 +976,7 @@ static void *miner_thread(void *userdata)
 		if (!opt_quiet && !abort_flag) { // CB
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
-#if defined(USE_WRAPNVML)
+#if 0
 		if (nvmlh != NULL) {
 			unsigned int tempC=0, fanpcnt=0, mwatts=0;
 			char gputempbuf[64], gpufanbuf[64], gpupowbuf[64]; 
@@ -1863,7 +1865,7 @@ int main(int argc, char *argv[])
 		return EXIT_CODE_SW_INIT_ERROR;
 	}
 
-#if defined(USE_WRAPNVML)
+#if 0
 	nvmlh = wrap_nvml_create();
 	if (nvmlh == NULL) {
 		applog(LOG_INFO, "NVML GPU monitoring is not available.");
@@ -1903,7 +1905,7 @@ int main(int argc, char *argv[])
 	timeEndPeriod(1); // be nice and forego high timer precision
 #endif
 
-#if defined(USE_WRAPNVML)
+#if 0
 	if (nvmlh != NULL) {
 		wrap_nvml_destroy(nvmlh);
 		applog(LOG_INFO, "Closing down NVML GPU monitoring.");

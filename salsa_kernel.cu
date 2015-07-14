@@ -44,7 +44,7 @@
 #if _64BIT
 #define MAXMEM 0x300000000ULL  // 12 GB (the largest Kepler)
 #else
-#define MAXMEM  0xFFFFFFFFULL  // nearly 4 GB (32 bit limitations)
+#define MAXMEM  0xFFFFFFFFULL / 4  // nearly 4 GB (32 bit limitations)
 #endif
 
 // require CUDA 5.5 driver API
@@ -245,8 +245,11 @@ extern "C" int cuda_throughput(int thr_id)
         GRID_BLOCKS = find_optimal_blockcount(thr_id, kernel, concurrent, WARPS_PER_BLOCK);
 
         if(GRID_BLOCKS == 0)
+        {
+			applog(LOG_WARNING, "GRID_BLOCKS == 0");
             return 0;
-
+		}
+		
         unsigned int THREADS_PER_WU = kernel->threads_per_wu();
         unsigned int mem_size = WU_PER_LAUNCH * sizeof(uint32_t) * 32;
         unsigned int state_size = WU_PER_LAUNCH * sizeof(uint32_t) * 8;
@@ -398,12 +401,18 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
     // if not otherwise specified or required, turn single memory allocations off as they reduce
     // the amount of memory that we can allocate on Windows Vista, 7 and 8 (WDDM driver model issue)
     if (device_singlememory[thr_id] == -1) device_singlememory[thr_id] = 0;
-
+   
+    applog(LOG_DEBUG, "Finding right kernel");
+	
+	/*
     // figure out which kernel implementation to use
     if (!validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK, &kernel, &props)) {
         kernel = NULL;
         if (device_config[thr_id] != NULL) {
-                 if (device_config[thr_id][0] == 'T' || device_config[thr_id][0] == 'Z')
+			
+			applog(LOG_INFO, "GPU ID: %c", device_config[thr_id][0]);
+			
+            if (device_config[thr_id][0] == 'T' || device_config[thr_id][0] == 'Z')
                 kernel = new NV2Kernel();
             else if (device_config[thr_id][0] == 't')
                 kernel = new TitanKernel();
@@ -416,25 +425,48 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
             else if (device_config[thr_id][0] == 'f' || device_config[thr_id][0] == 'X')
                 kernel = new TestKernel();
         }
-        if (kernel == NULL) kernel = Best_Kernel_Heuristics(&props);
+        else
+        {
+			applog(LOG_WARNING, "Failed determine GPU configuration");
+        }
+        
+        if (kernel == NULL) 
+        {
+			applog(LOG_INFO, "Failed to find good kernel, guessing..");
+			kernel = Best_Kernel_Heuristics(&props);
+		}
+		else
+		{
+			applog(LOG_INFO, "Found a good kernel");
+		}
     }
-
+    */
+    kernel = new KeplerKernel();
+    applog(LOG_DEBUG, "Checking GPU caps");
+	
+	/*
     if (kernel->get_major_version() > props.major || kernel->get_major_version() == props.major && kernel->get_minor_version() > props.minor)
     {
+		applog(LOG_ERR, "Checking GPU caps");
         applog(LOG_ERR, "GPU #%d: FATAL: the '%c' kernel requires %d.%d capability!", device_map[thr_id], kernel->get_identifier(), kernel->get_major_version(), kernel->get_minor_version());
         return 0;
     }
-
+    */
+    
     // set whatever cache configuration and shared memory bank mode the kernel prefers
     checkCudaErrors(cudaDeviceSetCacheConfig(kernel->cache_config()));
     checkCudaErrors(cudaDeviceSetSharedMemConfig(kernel->shared_mem_config()));
-
+	
+	applog(LOG_INFO, "Checking support for texture cache");
+	
     // some kernels (e.g. Titan) do not support the texture cache
     if (kernel->no_textures() && device_texturecache[thr_id]) {
         applog(LOG_WARNING, "GPU #%d: the '%c' kernel ignores the texture cache argument", device_map[thr_id], kernel->get_identifier());
         device_texturecache[thr_id] = 0;
     }
-
+    
+    applog(LOG_DEBUG, "Checking  single memory allocation support");
+    
     // Texture caching only works with single memory allocation
     if (device_texturecache[thr_id]) device_singlememory[thr_id] = 1;
 
@@ -442,7 +474,9 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
         applog(LOG_WARNING, "GPU #%d: the '%c' kernel requires single memory allocation", device_map[thr_id], kernel->get_identifier());
         device_singlememory[thr_id] = 1;
     }
-
+	
+	applog(LOG_DEBUG, "Checking lookup gap support");
+	
     if (device_lookup_gap[thr_id] == 0) device_lookup_gap[thr_id] = 1;
     if (!kernel->support_lookup_gap() && device_lookup_gap[thr_id] > 1)
     {
@@ -469,6 +503,8 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
     uint32_t *d_V = NULL;
     if (device_singlememory[thr_id])
     {
+		applog(LOG_DEBUG, "Single memory");
+		
         // if no launch config was specified, we simply
         // allocate the single largest memory chunk on the device that we can get
         if (validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK)) {
@@ -477,6 +513,7 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
         else {
             // compute no. of warps to allocate the largest number producing a single memory block
             // PROBLEM: one some devices, ALL allocations will fail if the first one failed. This sucks.
+            
             size_t MEM_LIMIT = (size_t)min((unsigned long long)MAXMEM, (unsigned long long)props.totalGlobalMem);
             int warpmax = (int)min((unsigned long long)TOTAL_WARP_LIMIT, (unsigned long long)MEM_LIMIT / (SCRATCH * WU_PER_WARP * sizeof(uint32_t)));
 
@@ -494,7 +531,8 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
                     if (warp == warpmax) break;
                     interval = (interval+1)/2;
                     warp += interval;
-                    if (warp > warpmax) warp = warpmax;
+                    if (warp > warpmax) 
+						warp = warpmax;
                 }
                 else
                 {
@@ -546,20 +584,42 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
     }
     else
     {
+    
+        applog(LOG_DEBUG, "Non Single memory");
+    
         if (validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK))
-            MAXWARPS[thr_id] = optimal_blocks * WARPS_PER_BLOCK;
+		{
+			MAXWARPS[thr_id] = optimal_blocks * WARPS_PER_BLOCK;
+			applog(LOG_DEBUG, "Optimal warps");
+		}
         else
+        {
             MAXWARPS[thr_id] = TOTAL_WARP_LIMIT;
-
+            applog(LOG_DEBUG, "Hard coded warps");
+		}
+		
         // chunked memory allocation up to device limits
+        
         int warp;
+        
         for (warp = 0; warp < MAXWARPS[thr_id]; ++warp) {
             // work around partition camping problems by adding a random start address offset to each allocation
             h_V_extra[thr_id][warp] = (props.major == 1) ? (16 * (rand()%(16384/16))) : 0;
             cudaGetLastError(); // clear the error state
+            
+            applog(LOG_DEBUG, "try cudaMalloc %i bytes", (SCRATCH * WU_PER_WARP + h_V_extra[thr_id][warp])*sizeof(uint32_t));
+ 
             cudaMalloc((void **) &h_V[thr_id][warp], (SCRATCH * WU_PER_WARP + h_V_extra[thr_id][warp])*sizeof(uint32_t));
-            if (cudaGetLastError() == cudaSuccess) h_V[thr_id][warp] += h_V_extra[thr_id][warp];
+            
+            if (cudaGetLastError() == cudaSuccess) 
+            {
+				applog(LOG_DEBUG, "cudaMalloc OK");
+				h_V[thr_id][warp] += h_V_extra[thr_id][warp];
+            }
             else {
+            
+				applog(LOG_DEBUG, "cudaMalloc FAIL");
+				
                 h_V_extra[thr_id][warp] = 0;
 
                 // back off by several warp allocations to have some breathing room
@@ -575,8 +635,10 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
         }
         MAXWARPS[thr_id] = warp;
     }
-    if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
-
+    
+    if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) 
+		kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
+	
     if (validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK))
     {
         if (optimal_blocks * WARPS_PER_BLOCK > MAXWARPS[thr_id])
@@ -892,7 +954,8 @@ skip:           ;
             h_V[thr_id][MAXWARPS[thr_id]] = NULL; h_V_extra[thr_id][MAXWARPS[thr_id]] = 0;
         }
     }
-
+	
+	applog(LOG_INFO, "GPU optimal_blocks %i", optimal_blocks);
     return optimal_blocks;
 }
 

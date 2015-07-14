@@ -5,6 +5,16 @@ else
 JANSSON_INCLUDES=
 endif
 
+if ARCH_ARM
+FPU_FLAGS= -mfpu=neon -mfloat-abi=hard 
+EXTRA_INCLUDES= -I /usr/include/arm-linux-gnueabihf/
+ARM_SHA2_ASM=sha2-arm.S
+else
+FPU_FLAGS= -msse2
+EXTRA_INCLUDES=
+ARM_SHA2_ASM=
+endif
+
 EXTRA_DIST		= autogen.sh README.txt LICENSE.txt \
 			  cudaminer.sln cudaminer.vcxproj cudaminer.vcxproj.filters \
 			  compat/gettimeofday.c compat/getopt/getopt_long.c cpuminer-config.h.in
@@ -19,6 +29,7 @@ cudaminer_SOURCES	= elist.h miner.h compat.h \
 			  cpu-miner.c util.c \
 			  wrapnvml.cu wrapnvml.h \
 			  sha2.c \
+			  $(ARM_SHA2_ASM) \
 			  scrypt.cpp \
 			  maxcoin.cpp \
 			  blakecoin.cpp \
@@ -33,40 +44,41 @@ cudaminer_SOURCES	= elist.h miner.h compat.h \
 			  test_kernel.cu test_kernel.h \
 			  nv_kernel.cu nv_kernel.h \
 			  nv_kernel2.cu nv_kernel2.h \
-			  titan_kernel.cu titan_kernel.h
+			  titan_kernel.cu titan_kernel.h 
+			   
 
 cudaminer_LDFLAGS	= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 cudaminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ -ldl
-cudaminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
+cudaminer_CPPFLAGS	= $(EXTRA_INCLUDES) $(FPU_FLAGS) @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 .cu.o:
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 sha256.o: sha256.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 keccak.o: keccak.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 blake.o: blake.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 # NOTE: now compiling for compute 1.0 again, as it's using less power and runs way faster on Linux
 fermi_kernel.o: fermi_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=64 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 $(JANSSON_INCLUDES) -o $@ -c $<
 
 kepler_kernel.o: kepler_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=sm_30 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
 
 titan_kernel.o: titan_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=sm_35 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
 
 # NOTE: now compiling for compute 1.0 again, as it's using less power and runs way faster on Linux
 test_kernel.o: test_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_10 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
 
 nv_kernel.o: nv_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=sm_30 --maxrregcount=63 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=63 $(JANSSON_INCLUDES) -o $@ -c $<
 
 nv_kernel2.o: nv_kernel2.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=sm_35 --maxrregcount=80 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=80 $(JANSSON_INCLUDES) -o $@ -c $<

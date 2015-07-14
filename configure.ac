@@ -52,6 +52,9 @@ case $target in
     have_x86=true
     have_x86_64=true
     ;;
+  arm*-*)
+	have_arm=true
+	;;
 esac
 
 PTHREAD_FLAGS="-pthread"
@@ -107,6 +110,7 @@ AM_CONDITIONAL([WANT_JANSSON], [test x$request_jansson = xtrue])
 AM_CONDITIONAL([HAVE_WINDOWS], [test x$have_win32 = xtrue])
 AM_CONDITIONAL([ARCH_x86], [test x$have_x86 = xtrue])
 AM_CONDITIONAL([ARCH_x86_64], [test x$have_x86_64 = xtrue])
+AM_CONDITIONAL([ARCH_ARM], [test x$have_arm = xtrue])
 
 if test x$request_jansson = xtrue
 then
