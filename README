@@ -1,9 +1,18 @@
+This is experimental version of Cudaminer for Jetson TK1
 
-IMPORTANT PUBLIC SERVICE ANNOUNCEMENT:
+Tested with Linux tegra-ubuntu 3.10.40 + CUDA Toolkit 6.5
 
-This has recently been ugpraded to use the CUDA 5.5 toolkit.
+- Keccak, Blake are disabled
 
-If you keep using CUDA 5.0, you will not see the amazing 30%
-speed gains with David Andersen's new Kepler, Titan kernels.
+Building
+========
+./autogen.sh
+./configure
+make clean
+make
 
-Also see README.txt
+Running benchmark on Jetson TK1
+===============================
+cudaminer --benchmark -m1 -D
+
+Also see README.txt:
