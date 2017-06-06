@@ -1,4 +1,4 @@
-This is experimental version of CudaMiner for Jetson TX1/TX2
+This is an experimental version of CudaMiner for Jetson TX2/TX1
 
 Tested on Jetson TX2 with JetPack 3.0 (L4T 27.1 + CUDA Toolkit 8.0)
 
@@ -17,6 +17,6 @@ $ make
 
 Running benchmark on Jetson TX2
 ===============================
-cudaminer --benchmark -m1 -D
+$ ./cudaminer --benchmark -l auto -m1 -D
 
-Also see README.txt:
+Also read README.txt
