@@ -1,17 +1,21 @@
-This is experimental version of Cudaminer for Jetson TK1
+This is experimental version of CudaMiner for Jetson TX1/TX2
 
-Tested with Linux tegra-ubuntu 3.10.40 + CUDA Toolkit 6.5
+Tested on Jetson TX2 with JetPack 3.0 (L4T 27.1 + CUDA Toolkit 8.0)
 
 - Keccak, Blake are disabled
 
 Building
 ========
-./autogen.sh
-./configure
-make clean
-make
+$ sudo apt-get install libcurl4-gnutls-dev autogen automake \
+                       libssl-dev libssl1.0.0 libcryptokit-ocaml \
+                       libcryptokit-ocaml-dev libcrypto++-dev \
+                       libcrypto++9v5
+$ ./autogen.sh
+$ ./configure
+$ make clean
+$ make
 
-Running benchmark on Jetson TK1
+Running benchmark on Jetson TX2
 ===============================
 cudaminer --benchmark -m1 -D
 
