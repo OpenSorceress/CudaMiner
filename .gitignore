@@ -2,6 +2,9 @@
 autom4te.cache/
 compat/jansson/.deps/
 stamp-h1
+Makefile.in
+conf361.file
+configure
 Makefile
 compat/Makefile
 compat/jansson/Makefile
