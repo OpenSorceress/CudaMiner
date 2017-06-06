@@ -1,0 +1,4 @@
+.deps/
+autom4te.cache/
+compat/jansson/.deps/
+stamp-h1
