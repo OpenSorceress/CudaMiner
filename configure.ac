@@ -53,8 +53,11 @@ case $target in
     have_x86_64=true
     ;;
   arm*-*)
-	have_arm=true
-	;;
+    have_arm=true
+    ;;
+  aarch64*)
+    have_arm=true
+    ;;
 esac
 
 PTHREAD_FLAGS="-pthread"
@@ -135,7 +138,7 @@ AC_CONFIG_FILES([
 
 dnl find out what version we are running
 ARCH=`uname -m`
-if [[ $ARCH == "x86_64" || $ARCH == "aarch64" ]];
+if test $ARCH = "x86_64" || test $ARCH = "aarch64"
 then
   SUFFIX="64"
 else

@@ -6,8 +6,8 @@ JANSSON_INCLUDES=
 endif
 
 if ARCH_ARM
-FPU_FLAGS= -mfpu=neon -mfloat-abi=hard 
-EXTRA_INCLUDES= -I /usr/include/arm-linux-gnueabihf/
+FPU_FLAGS= -D __ARM_NEON_FP
+EXTRA_INCLUDES= -I /usr/include/aarch64-linux-gnu
 ARM_SHA2_ASM=sha2-arm.S
 else
 FPU_FLAGS= -msse2
@@ -51,34 +51,37 @@ cudaminer_LDFLAGS	= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 cudaminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ -ldl
 cudaminer_CPPFLAGS	= $(EXTRA_INCLUDES) $(FPU_FLAGS) @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
+CUDA_ARCH  = -gencode arch=compute_32,code=sm_32
+CUDA_ARCH += -gencode arch=compute_53,code=sm_53
+CUDA_ARCH += -gencode arch=compute_62,code=sm_62
+CUDA_ARCH += -gencode arch=compute_62,code=compute_62
+
 .cu.o:
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 sha256.o: sha256.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 keccak.o: keccak.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 blake.o: blake.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
-# NOTE: now compiling for compute 1.0 again, as it's using less power and runs way faster on Linux
 fermi_kernel.o: fermi_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=64 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
 
 kepler_kernel.o: kepler_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
 
 titan_kernel.o: titan_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
 
-# NOTE: now compiling for compute 1.0 again, as it's using less power and runs way faster on Linux
 test_kernel.o: test_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=32 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
 
 nv_kernel.o: nv_kernel.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=63 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
 
 nv_kernel2.o: nv_kernel2.cu
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_32 --maxrregcount=80 $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ $(CUDA_ARCH) $(JANSSON_INCLUDES) -o $@ -c $<
